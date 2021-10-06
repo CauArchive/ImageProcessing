@@ -220,6 +220,8 @@ void CImageProcessingDoc::OnProcessMosaic()
 	// TODO: Add a mosaic code here
 	if (m_pImage) {
 		DlgMosaicOption dlg;
+		char str[256];
+		memset(str, NULL, sizeof(str));
 		if (dlg.DoModal() == IDOK) {
 			DWORD dwWindowSize = dlg.m_dwWindowSize;
 			DWORD sqrtDwWindowSize = dwWindowSize * dwWindowSize;
@@ -231,57 +233,113 @@ void CImageProcessingDoc::OnProcessMosaic()
 			DWORD greenColorSum = 0;
 			DWORD blueColorSum = 0;
 
-			DWORD pixelXRest = width % dwWindowSize;
-			DWORD pixelYRest = height % dwWindowSize;
+			
+			CxImage* buffer = new CxImage;
 
-			for (DWORD y = 0; y < height / dwWindowSize + 1; y++) {
-				DWORD widthLocation;
-				DWORD heightLocation;
-				DWORD xOffset;
-				DWORD yOffset;
-				if (y == height / dwWindowSize + 1)
-					if (pixelYRest != 0) {
-						yOffset = pixelYRest;
-						heightLocation = height / dwWindowSize;
+			if (dwWindowSize == 0) {
+				// do blurring
+				float mask[3][3] = {};
+				buffer->Create(width, height, 24, CXIMAGE_FORMAT_BMP);
+				buffer->Copy(*m_pImage);
+				for (DWORD y = 0; y < height; y++) {
+					for (DWORD x = 0; x < width; x++) {
+						float sumRed = 0, sumGreen = 0, sumBlue = 0;
+						for (int j = 0; j < 3; j++)
+							for (int i = 0; i < 3; i++) {
+								color = buffer->GetPixelColor(x + i, y + j);
+								sumRed += color.rgbRed * mask[j][i];
+								sumGreen += color.rgbGreen * mask[j][i];
+								sumBlue += color.rgbBlue * mask[j][i];
+							}
+						newcolor.rgbRed = sumRed;
+						newcolor.rgbGreen = sumGreen;
+						newcolor.rgbBlue = sumBlue;
+						m_pImage->SetPixelColor(x + 1, y + 1, newcolor);
 					}
-					else
-						break;
-				else{
-					yOffset = dwWindowSize;
-					heightLocation = y * dwWindowSize;
 				}
-				for (DWORD x = 0; x < width / dwWindowSize + 1; x++) {
-					redColorSum = 0;
-					greenColorSum = 0;
-					blueColorSum = 0;
-
-					if (x == width / dwWindowSize + 1)
-						if (pixelXRest != 0) {
-							xOffset = pixelXRest;
-							widthLocation = width / dwWindowSize;
+			}
+			else if (dwWindowSize == 1) {
+				// do Sharpening
+				// float mask[3][3] = { {0,-1,0},{-1,5,-1},{0,-1,0} };
+				float mask[3][3] = { {-1,-1,-1},{-1,9,-1},{-1,-1,-1} };
+				buffer->Create(width, height, 24, CXIMAGE_FORMAT_BMP);
+				buffer->Copy(*m_pImage);
+				for (DWORD y = 0; y < height; y++) {
+					for (DWORD x = 0; x < width; x++) {
+						int sumRed = 0, sumGreen = 0, sumBlue = 0;
+						for (int j = 0; j < 3; j++)
+							for (int i = 0; i < 3; i++) {
+								color = buffer->GetPixelColor(x + i, y + j);
+								sumRed += color.rgbRed * mask[j][i];
+								sumGreen += color.rgbGreen * mask[j][i];
+								sumBlue += color.rgbBlue * mask[j][i];
+							}
+						if (sumRed > 255) sumRed = 255;
+						if (sumRed < 0) sumRed = 0;
+						if (sumGreen > 255) sumGreen = 255;
+						if (sumGreen < 0) sumGreen = 0;
+						if (sumBlue > 255) sumBlue = 255;
+						if (sumBlue < 0) sumBlue = 0;
+						newcolor.rgbRed = sumRed;
+						newcolor.rgbGreen = sumGreen;
+						newcolor.rgbBlue = sumBlue;
+						m_pImage->SetPixelColor(x + 1, y + 1, newcolor);
+					}
+				}
+			}
+			else {
+				// do Mosaic
+				DWORD pixelXRest = width % dwWindowSize;
+				DWORD pixelYRest = height % dwWindowSize;
+				for (DWORD y = 0; y < height / dwWindowSize + 1; y++) {
+					DWORD widthLocation;
+					DWORD heightLocation;
+					DWORD xOffset;
+					DWORD yOffset;
+					if (y == height / dwWindowSize + 1)
+						if (pixelYRest != 0) {
+							yOffset = pixelYRest;
+							heightLocation = height / dwWindowSize;
 						}
 						else
 							break;
 					else {
-						xOffset = dwWindowSize;
-						widthLocation = x * dwWindowSize;
+						yOffset = dwWindowSize;
+						heightLocation = y * dwWindowSize;
 					}
-					for (DWORD j = heightLocation; j < heightLocation + yOffset; j++) {
-						for (DWORD i = widthLocation; i < widthLocation + xOffset; i++) {
-							color = m_pImage->GetPixelColor(i, j);
-							redColorSum += color.rgbRed;
-							greenColorSum += color.rgbGreen;
-							blueColorSum += color.rgbBlue;
+					for (DWORD x = 0; x < width / dwWindowSize + 1; x++) {
+						redColorSum = 0;
+						greenColorSum = 0;
+						blueColorSum = 0;
+
+						if (x == width / dwWindowSize + 1)
+							if (pixelXRest != 0) {
+								xOffset = pixelXRest;
+								widthLocation = width / dwWindowSize;
+							}
+							else
+								break;
+						else {
+							xOffset = dwWindowSize;
+							widthLocation = x * dwWindowSize;
 						}
-					}
-					newcolor.rgbRed = redColorSum / sqrtDwWindowSize;
-					newcolor.rgbGreen = greenColorSum / sqrtDwWindowSize;
-					newcolor.rgbBlue = blueColorSum / sqrtDwWindowSize;
-					for (DWORD j = heightLocation; j < heightLocation + yOffset; j++)
-						for (DWORD i = widthLocation; i < widthLocation + xOffset; i++)
-							m_pImage->SetPixelColor(i, j, newcolor);
-				};
-			}
+						for (DWORD j = heightLocation; j < heightLocation + yOffset; j++) {
+							for (DWORD i = widthLocation; i < widthLocation + xOffset; i++) {
+								color = m_pImage->GetPixelColor(i, j);
+								redColorSum += color.rgbRed;
+								greenColorSum += color.rgbGreen;
+								blueColorSum += color.rgbBlue;
+							}
+						}
+						newcolor.rgbRed = redColorSum / sqrtDwWindowSize;
+						newcolor.rgbGreen = greenColorSum / sqrtDwWindowSize;
+						newcolor.rgbBlue = blueColorSum / sqrtDwWindowSize;
+						for (DWORD j = heightLocation; j < heightLocation + yOffset; j++)
+							for (DWORD i = widthLocation; i < widthLocation + xOffset; i++)
+								m_pImage->SetPixelColor(i, j, newcolor);
+					};
+				}
+			}			
 		}
 	}
 
