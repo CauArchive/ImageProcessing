@@ -140,17 +140,30 @@ void CImageProcessingDoc::CalculateHistogram()
 {
 	// TODO: Add a calculating histogram code here
 	if (m_pImage) {
-		// Histogram function, which is implemented in Cximage
-		 //m_histogramMax = m_pImage->Histogram(m_histogramRed, m_histogramGreen, m_histogramBlue, m_histogramGray);
+		RGBQUAD color;
+		DWORD calGray;
+		DWORD width = m_pImage->GetWidth();
+		DWORD height = m_pImage->GetHeight();
 
-		 
-		// 가짜코드
+		
 		for (int i = 0; i < 256; i++){
-			m_histogramRed[i]   = rand() % 200;
-			m_histogramGreen[i] = rand() % 200;
-			m_histogramBlue[i]  = rand() % 200;
-			m_histogramGray[i]  = rand() % 200;
+			m_histogramRed[i]   = 0;
+			m_histogramGreen[i] = 0;
+			m_histogramBlue[i]  = 0;
+			m_histogramGray[i]  = 0;
 		}
+		
+		for (DWORD y = 0; y < height; y++) {
+			for (DWORD x = 0; x < width; x++) {
+				color = m_pImage->GetPixelColor(x, y);
+				m_histogramRed[color.rgbRed] += 1;
+				m_histogramGreen[color.rgbGreen] += 1;
+				m_histogramBlue[color.rgbBlue] += 1;
+				calGray = (color.rgbRed + color.rgbGreen + color.rgbBlue) / 3;
+				m_histogramGray[calGray] += 1;
+			}
+		}
+		
 
 		m_histogramMax = 0;
 		for (int i = 0; i < 256; i++){
@@ -159,7 +172,6 @@ void CImageProcessingDoc::CalculateHistogram()
 			m_histogramMax = max(m_histogramMax, m_histogramBlue[i] );
 			m_histogramMax = max(m_histogramMax, m_histogramGray[i] );
 		}
-		//////////////////////////////////////////////////////////////
 	}
 }
 
@@ -220,8 +232,8 @@ void CImageProcessingDoc::OnProcessMosaic()
 	// TODO: Add a mosaic code here
 	if (m_pImage) {
 		DlgMosaicOption dlg;
-		char str[256];
-		memset(str, NULL, sizeof(str));
+		
+
 		if (dlg.DoModal() == IDOK) {
 			DWORD dwWindowSize = dlg.m_dwWindowSize;
 			DWORD sqrtDwWindowSize = dwWindowSize * dwWindowSize;
@@ -232,58 +244,180 @@ void CImageProcessingDoc::OnProcessMosaic()
 			DWORD redColorSum = 0;
 			DWORD greenColorSum = 0;
 			DWORD blueColorSum = 0;
+			DWORD gray;
+			DWORD newgray;
+			RGBQUAD myRed = { 0,0,255 };
+			RGBQUAD myGreen = { 0, 255, 0 };
+			RGBQUAD myBlue = { 255,0,0 };
+			RGBQUAD mySky = { 235, 206, 135 };
+			RGBQUAD myGray = { 128, 128, 128 };
+			BYTE colorPivot = 50;
+
 
 			
 			CxImage* buffer = new CxImage;
+			buffer->Create(width, height, 24, CXIMAGE_FORMAT_BMP);
+			buffer->Copy(*m_pImage);
+			float vMask = 1;
+			vMask /= 9;
+			float mask_b[3][3] = { {vMask, vMask, vMask},{vMask, vMask, vMask},{vMask, vMask, vMask} };
+			float mask_h[3][3] = { {-1., -2., -1.},{0., 0., 0.},{1., 2., 1.} };
+			float mask_v[3][3] = { {-1., 0., 1.},{-2., 0., 2.},{-1., 0., 1.} };
+			float mask_d1[3][3] = { {0., 1., 2.},{-1., 0., 1.},{-2., -1., 0.} };
+			float mask_d2[3][3] = { {-2., -1., 0.},{-1., 0., 1.},{0., 1., 2.} };
 
+			// blurring
+			for (DWORD y = 0; y < height; y++) {
+				for (DWORD x = 0; x < width; x++) {
+					float sumRed = 0, sumGreen = 0, sumBlue = 0;
+					for (int j = 0; j < 3; j++)
+						for (int i = 0; i < 3; i++) {
+							color = buffer->GetPixelColor(x + i, y + j);
+							sumRed += color.rgbRed * mask_b[j][i];
+							sumGreen += color.rgbGreen * mask_b[j][i];
+							sumBlue += color.rgbBlue * mask_b[j][i];
+						}
+					if (sumRed > 255) sumRed = 255;
+					if (sumRed < 0) sumRed = 0;
+					if (sumGreen > 255) sumGreen = 255;
+					if (sumGreen < 0) sumGreen = 0;
+					if (sumBlue > 255) sumBlue = 255;
+					if (sumBlue < 0) sumBlue = 0;
+					newcolor.rgbRed = sumRed;
+					newcolor.rgbGreen = sumGreen;
+					newcolor.rgbBlue = sumBlue;
+					m_pImage->SetPixelColor(x + 1, y + 1, newcolor);
+				}
+			}
+
+			// do all
 			if (dwWindowSize == 0) {
-				// do blurring
-				float mask[3][3] = {};
-				buffer->Create(width, height, 24, CXIMAGE_FORMAT_BMP);
-				buffer->Copy(*m_pImage);
 				for (DWORD y = 0; y < height; y++) {
 					for (DWORD x = 0; x < width; x++) {
-						float sumRed = 0, sumGreen = 0, sumBlue = 0;
-						for (int j = 0; j < 3; j++)
+						int sumGray_h = 0;
+						int sumGray_v = 0;
+						int sumGray_d1 = 0;
+						int sumGray_d2 = 0;
+						for (int j = 0; j < 3; j++) {
 							for (int i = 0; i < 3; i++) {
-								color = buffer->GetPixelColor(x + i, y + j);
-								sumRed += color.rgbRed * mask[j][i];
-								sumGreen += color.rgbGreen * mask[j][i];
-								sumBlue += color.rgbBlue * mask[j][i];
+								gray = buffer->GetPixelGray(x + i, y + j);
+								sumGray_h += gray * mask_h[j][i];
+								sumGray_v += gray * mask_v[j][i];
+								sumGray_d1 += gray * mask_d1[j][i];
+								sumGray_d2 += gray * mask_d2[j][i];
 							}
-						newcolor.rgbRed = sumRed;
-						newcolor.rgbGreen = sumGreen;
-						newcolor.rgbBlue = sumBlue;
-						m_pImage->SetPixelColor(x + 1, y + 1, newcolor);
+						}
+						newcolor.rgbRed = gray;
+						newcolor.rgbGreen = gray;
+						newcolor.rgbBlue = gray;
+						if (sumGray_h > colorPivot) {
+							m_pImage->SetPixelColor(x + 1, y + 1, myRed);
+						}
+						else if (sumGray_v > colorPivot) {
+							m_pImage->SetPixelColor(x + 1, y + 1, myBlue);
+						}
+						else if (sumGray_d1 > colorPivot) {
+							m_pImage->SetPixelColor(x + 1, y + 1, myGreen);
+						}
+						else if (sumGray_d2 > colorPivot) {
+							m_pImage->SetPixelColor(x + 1, y + 1, mySky);
+						}
+						else {
+							m_pImage->SetPixelColor(x + 1, y + 1, newcolor);
+						}
+
 					}
 				}
 			}
+			// horizontal
 			else if (dwWindowSize == 1) {
-				// do Sharpening
-				// float mask[3][3] = { {0,-1,0},{-1,5,-1},{0,-1,0} };
-				float mask[3][3] = { {-1,-1,-1},{-1,9,-1},{-1,-1,-1} };
-				buffer->Create(width, height, 24, CXIMAGE_FORMAT_BMP);
-				buffer->Copy(*m_pImage);
 				for (DWORD y = 0; y < height; y++) {
 					for (DWORD x = 0; x < width; x++) {
-						int sumRed = 0, sumGreen = 0, sumBlue = 0;
-						for (int j = 0; j < 3; j++)
+						int sumGray = 0;
+						for (int j = 0; j < 3; j++) {
 							for (int i = 0; i < 3; i++) {
-								color = buffer->GetPixelColor(x + i, y + j);
-								sumRed += color.rgbRed * mask[j][i];
-								sumGreen += color.rgbGreen * mask[j][i];
-								sumBlue += color.rgbBlue * mask[j][i];
+								gray = buffer->GetPixelGray(x + i, y + j);
+								sumGray += gray * mask_h[j][i];
 							}
-						if (sumRed > 255) sumRed = 255;
-						if (sumRed < 0) sumRed = 0;
-						if (sumGreen > 255) sumGreen = 255;
-						if (sumGreen < 0) sumGreen = 0;
-						if (sumBlue > 255) sumBlue = 255;
-						if (sumBlue < 0) sumBlue = 0;
-						newcolor.rgbRed = sumRed;
-						newcolor.rgbGreen = sumGreen;
-						newcolor.rgbBlue = sumBlue;
-						m_pImage->SetPixelColor(x + 1, y + 1, newcolor);
+						}
+						newcolor.rgbRed = gray;
+						newcolor.rgbGreen = gray;
+						newcolor.rgbBlue = gray;
+						if (sumGray > colorPivot) {
+							m_pImage->SetPixelColor(x + 1, y + 1, myRed);
+						}
+						else {
+							m_pImage->SetPixelColor(x + 1, y + 1, newcolor);
+						}
+					}
+				}
+			}
+			//vertical
+			else if (dwWindowSize == 2) {
+				for (DWORD y = 0; y < height; y++) {
+					for (DWORD x = 0; x < width; x++) {
+						int sumGray = 0;
+						for (int j = 0; j < 3; j++) {
+							for (int i = 0; i < 3; i++) {
+								gray = buffer->GetPixelGray(x + i, y + j);
+								sumGray += gray * mask_v[j][i];
+							}
+						}
+						newcolor.rgbRed = gray;
+						newcolor.rgbGreen = gray;
+						newcolor.rgbBlue = gray;
+						if (sumGray > colorPivot) {
+							m_pImage->SetPixelColor(x + 1, y + 1, myBlue);
+						}
+						else {
+							m_pImage->SetPixelColor(x + 1, y + 1, newcolor);
+						}
+					}
+				}
+			}
+			//diagonal1
+			else if (dwWindowSize == 3) {
+				for (DWORD y = 0; y < height; y++) {
+					for (DWORD x = 0; x < width; x++) {
+						int sumGray = 0;
+						for (int j = 0; j < 3; j++) {
+							for (int i = 0; i < 3; i++) {
+								gray = buffer->GetPixelGray(x + i, y + j);
+								sumGray += gray * mask_d1[j][i];
+							}
+						}
+						newcolor.rgbRed = gray;
+						newcolor.rgbGreen = gray;
+						newcolor.rgbBlue = gray;
+						if (sumGray > colorPivot) {
+							m_pImage->SetPixelColor(x + 1, y + 1, myGreen);
+						}
+						else {
+							m_pImage->SetPixelColor(x + 1, y + 1, newcolor);
+						}
+					}
+				}
+			}
+			//diagonal2
+			else if (dwWindowSize == 4) {
+				for (DWORD y = 0; y < height; y++) {
+					for (DWORD x = 0; x < width; x++) {
+						int sumGray = 0;
+						for (int j = 0; j < 3; j++) {
+							for (int i = 0; i < 3; i++) {
+								gray = buffer->GetPixelGray(x + i, y + j);
+								sumGray += gray * mask_d2[j][i];
+							}
+						}
+						newcolor.rgbRed = gray;
+						newcolor.rgbGreen = gray;
+						newcolor.rgbBlue = gray;
+						if (sumGray > colorPivot) {
+							m_pImage->SetPixelColor(x + 1, y + 1, mySky);
+						}
+						else {
+							m_pImage->SetPixelColor(x + 1, y + 1, newcolor);
+						}
 					}
 				}
 			}
@@ -352,26 +486,43 @@ void CImageProcessingDoc::OnProcessComposite()
 	// TODO: Add a composite code here
 	if (m_pImage) {
 		DlgCompositeOption dlg;
-
+		char str[256];
+		memset(str, NULL, sizeof(str));
 		if (dlg.DoModal() == IDOK) {
 			int nOperatorID = dlg.GetCompositeOperatorID();
 			CxImage * pSecondImage = dlg.GetSecondImage();
-
 			DWORD width = m_pImage->GetWidth();
 			DWORD height = m_pImage->GetHeight();
 			RGBQUAD firstColor;
 			RGBQUAD secondColor;
 			RGBQUAD newColor;
+			int sumRed, sumGreen, sumBlue;
 
+			
 			for (DWORD y = 0; y < height; y++) {
 				for (DWORD x = 0; x < width; x++) {
 					firstColor = m_pImage->GetPixelColor(x, y);
 					secondColor = pSecondImage->GetPixelColor(x, y);
+					if (nOperatorID == 0) {
+						sumRed = firstColor.rgbRed + secondColor.rgbRed;
+						sumGreen = firstColor.rgbGreen + secondColor.rgbGreen;
+						sumBlue = firstColor.rgbBlue + secondColor.rgbBlue;
+						if (sumRed > 255) sumRed = 255;
+						if (sumGreen > 255) sumGreen = 255;
+						if (sumBlue > 255) sumBlue = 255;
+					}
+					else if (nOperatorID == 1) {
+						sumRed = firstColor.rgbRed - secondColor.rgbRed;
+						sumGreen = firstColor.rgbGreen - secondColor.rgbGreen;
+						sumBlue = firstColor.rgbBlue - secondColor.rgbBlue;
+						if (sumRed < 0) sumRed = 0;
+						if (sumGreen < 0) sumGreen = 0;
+						if (sumBlue < 0) sumBlue = 0;
+					}
 
-					newColor.rgbBlue  = (BYTE)RGB2GRAY(secondColor.rgbRed, secondColor.rgbGreen, secondColor.rgbBlue);
-					newColor.rgbGreen = (BYTE)RGB2GRAY(secondColor.rgbRed, secondColor.rgbGreen, secondColor.rgbBlue);
-					newColor.rgbRed   = (BYTE)RGB2GRAY(secondColor.rgbRed, secondColor.rgbGreen, secondColor.rgbBlue);
-
+					newColor.rgbRed = sumRed;
+					newColor.rgbGreen = sumGreen;
+					newColor.rgbBlue = sumBlue;
 					m_pImage->SetPixelColor(x, y, newColor);
 				}
 			}
