@@ -59,22 +59,22 @@ int main(int, char**) {
     {
       int size = approx.size();
       // Decide whether the contour is a triangle or a rectangle
-      // if (size % 2 == 0) {
-      //   line(img_result, approx[0], approx[approx.size() - 1],
-      //        Scalar(0, 255, 0), 3);
-      //   for (int k = 0; k < size - 1; k++)
-      //     line(img_result, approx[k], approx[k + 1], Scalar(0, 255, 0), 3);
-      //   for (int k = 0; k < size; k++)
-      //     circle(img_result, approx[k], 3, Scalar(0, 0, 255));
-      // } else {
-      //   line(img_result, approx[0], approx[approx.size() - 1],
-      //        Scalar(0, 255, 0), 3);
-      //   for (int k = 0; k < size - 1; k++)
-      //     line(img_result, approx[k], approx[k + 1], Scalar(0, 255, 0), 3);
+      if (size % 2 == 0) {
+        line(img_result, approx[0], approx[approx.size() - 1],
+             Scalar(0, 255, 0), 3);
+        for (int k = 0; k < size - 1; k++)
+          line(img_result, approx[k], approx[k + 1], Scalar(0, 255, 0), 3);
+        for (int k = 0; k < size; k++)
+          circle(img_result, approx[k], 3, Scalar(0, 0, 255));
+      } else {
+        line(img_result, approx[0], approx[approx.size() - 1],
+             Scalar(0, 255, 0), 3);
+        for (int k = 0; k < size - 1; k++)
+          line(img_result, approx[k], approx[k + 1], Scalar(0, 255, 0), 3);
 
-      //   for (int k = 0; k < size; k++)
-      //     circle(img_result, approx[k], 3, Scalar(0, 0, 255));
-      // }
+        for (int k = 0; k < size; k++)
+          circle(img_result, approx[k], 3, Scalar(0, 0, 255));
+      }
       // If approximated Contour size is over 3, it is a triangle
       if (size == 3) setLabel(img_result, "triangle", contours[i]);
       // If approximated Contour size is over 4, it is a rectangle
