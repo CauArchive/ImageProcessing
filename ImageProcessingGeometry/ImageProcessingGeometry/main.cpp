@@ -1,150 +1,92 @@
-//opencv header file include
-/*
+#include <iostream>
+#include <string>
+
 #include "opencv2/opencv.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/core/types_c.h"
-
-
-//project main function
-int main(int argc, char** argv) {
-
-	//create image window
-	cv::namedWindow("image", 1);
-
-	//create test Mat, 400 x 400
-	cv::Mat testMat = cv::Mat::zeros(200, 850, CV_8UC3);
-
-	//write text
-	cv::putText(testMat, "HELLO WORLD!! HEISANBUG", cvPoint(100, 100),
-		cv::FONT_HERSHEY_PLAIN, 3, cvScalar(0, 255, 255), 4);
-
-	//show image
-	cv::imshow("image", testMat);
-	cv::waitKey(0);
-
-	//close all windows
-	cv::destroyAllWindows();
-
-	return 0;
-}
-*/
-#include "opencv2/opencv.hpp" 
-#include <iostream>  
-#include <string> 
 
 using namespace cv;
 using namespace std;
 
-
-
-
-void setLabel(Mat& image, string str, vector<Point> contour)
-{
-	int fontface = FONT_HERSHEY_SIMPLEX;
-	double scale = 0.5;
-	int thickness = 1;
-	int baseline = 0;
-
-	Size text = getTextSize(str, fontface, scale, thickness, &baseline);
-	Rect r = boundingRect(contour);
-
-	Point pt(r.x + ((r.width - text.width) / 2), r.y + ((r.height + text.height) / 2));
-	rectangle(image, pt + Point(0, baseline), pt + Point(text.width, -text.height), CV_RGB(200, 200, 200), FILLED);
-	putText(image, str, pt, fontface, scale, CV_RGB(0, 0, 0), thickness, 8);
+void setLabel(Mat& image, string str, vector<Point> contour) {
+  int fontface = FONT_HERSHEY_SIMPLEX;
+  double scale = 0.5;
+  int thickness = 1;
+  int baseline = 0;
+  Size text = getTextSize(str, fontface, scale, thickness, &baseline);
+  Rect r = boundingRect(contour);
+  Point pt(r.x + ((r.width - text.width) / 2),
+           r.y + ((r.height + text.height) / 2));
+  rectangle(image, pt + Point(0, baseline),
+            pt + Point(text.width, -text.height), CV_RGB(200, 200, 200),
+            FILLED);
+  putText(image, str, pt, fontface, scale, CV_RGB(0, 0, 0), thickness, 8);
 }
 
+int main(int, char**) {
+  Mat img_input, img_result, img_gray;
+  // Image read
+  img_input = imread("1.png", IMREAD_COLOR);
+  if (img_input.empty()) {
+    cout << "ì´ë¯¸ì§€ê°€ ì—†ìŠµë‹ˆë‹¤\n";
+    return -1;
+  }
+  //ì´ë¯¸ì§€ë¥¼ grayscaleë¡œ ë³€í™˜
+  cvtColor(img_input, img_gray, COLOR_BGR2GRAY);
+  //ë°”ì´ë„ˆë¦¬ ì´ë¯¸ì§€ë¡œ ë³€í™˜
+  Mat binary_image;
+  threshold(img_gray, img_gray, 0, 255, THRESH_BINARY_INV | THRESH_OTSU);
+  //ì´ë¯¸ì§€ì˜ Contourë¥¼ ì°¾ìŠµë‹ˆë‹¤.
+  vector<vector<Point> > contours;
+  findContours(img_gray, contours, RETR_LIST, CHAIN_APPROX_SIMPLE);
+  //ì°¾ì€ Contourë¥¼ ê·¼ì‚¬í™”í•©ë‹ˆë‹¤.
+  vector<Point2f> approx;
+  img_result = img_input.clone();
+  for (size_t i = 0; i < contours.size(); i++) {
+    approxPolyDP(Mat(contours[i]), approx,
+                 arcLength(Mat(contours[i]), true) * 0.02, true);
+    if (fabs(contourArea(Mat(approx))) >
+        100)  //ì´ë¯¸ì§€ì˜ ë©´ì ì¸ íŠ¹ì • í¬ê¸°ë³´ë‹¤ ì»¤ì•¼ ê°ì§€í•©ë‹ˆë‹¤
+    {
+      int size = approx.size();
+      // Contourë¥¼ ê·¼ì‚¬í™”í•œ ê²°ê³¼ë¥¼ ì´ìš©í•´ì„œ ì‚¬ê°í˜•ì¸ì§€ ì§ì‚¬ê°í˜•ì¸ì§€ íŒë‹¨í•©ë‹ˆë‹¤.
+      if (size % 2 == 0) {
+        line(img_result, approx[0], approx[approx.size() - 1],
+             Scalar(0, 255, 0), 3);
+        for (int k = 0; k < size - 1; k++)
+          line(img_result, approx[k], approx[k + 1], Scalar(0, 255, 0), 3);
+        for (int k = 0; k < size; k++)
+          circle(img_result, approx[k], 3, Scalar(0, 0, 255));
+      } else {
+        line(img_result, approx[0], approx[approx.size() - 1],
+             Scalar(0, 255, 0), 3);
+        for (int k = 0; k < size - 1; k++)
+          line(img_result, approx[k], approx[k + 1], Scalar(0, 255, 0), 3);
 
+        for (int k = 0; k < size; k++)
+          circle(img_result, approx[k], 3, Scalar(0, 0, 255));
+      }
 
-int main(int, char**)
-{
-	Mat img_input, img_result, img_gray;
-	// Image ºÒ·¯¿À±â  
-	img_input = imread("1.png", IMREAD_COLOR);
-	if (img_input.empty())
-	{
-		cout << "Could not open or find the image" << std::endl;
-		return -1;
-	}
+      //ê·¼ì‚¬í™”í•œ Contourì˜ í¬ê¸°ê°€ 3ì´ë©´ ì‚¼ê°í˜•ì…ë‹ˆë‹¤
+      if (size == 3) setLabel(img_result, "triangle", contours[i]);
+      //ê·¼ì‚¬í™”í•œ Contourì˜ í¬ê¸°ê°€ 4ì´ë©´ ì‚¬ê°í˜•ì…ë‹ˆë‹¤
+      else if (size == 4 && isContourConvex(Mat(approx)))
+        setLabel(img_result, "rectangle", contours[i]);
+      //ê·¼ì‚¬í™”í•œ Contourì˜ í¬ê¸°ê°€ 5ì´ë©´ ì˜¤ê°í˜•ì…ë‹ˆë‹¤
+      else if (size == 5 && isContourConvex(Mat(approx)))
+        setLabel(img_result, "pentagon", contours[i]);
+      //ê·¼ì‚¬í™”í•œ Contourì˜ í¬ê¸°ê°€ 6ì´ë©´ ìœ¡ê°í˜•ì…ë‹ˆë‹¤
+      else if (size == 6 && isContourConvex(Mat(approx)))
+        setLabel(img_result, "hexagon", contours[i]);
+      else if (size == 10 && isContourConvex(Mat(approx)))
+        setLabel(img_result, "decagon", contours[i]);
+      else
+        setLabel(img_result, to_string(approx.size()), contours[i]);
+    }
+  }
 
+  imshow("input", img_input);
+  imshow("result", img_result);
 
-	//±×·¹ÀÌ½ºÄÉÀÏ ÀÌ¹ÌÁö·Î º¯È¯  
-	cvtColor(img_input, img_gray, COLOR_BGR2GRAY);
+  waitKey(0);
 
-	//ÀÌÁøÈ­ ÀÌ¹ÌÁö·Î º¯È¯
-	Mat binary_image;
-	threshold(img_gray, img_gray, 0, 255, THRESH_BINARY_INV | THRESH_OTSU);
-
-	//contour¸¦ Ã£´Â´Ù.
-	vector<vector<Point> > contours;
-	findContours(img_gray, contours, RETR_LIST, CHAIN_APPROX_SIMPLE);
-
-	//contour¸¦ ±Ù»çÈ­ÇÑ´Ù.
-	vector<Point2f> approx;
-	img_result = img_input.clone();
-
-	for (size_t i = 0; i < contours.size(); i++)
-	{
-		approxPolyDP(Mat(contours[i]), approx, arcLength(Mat(contours[i]), true)*0.02, true);
-
-		if (fabs(contourArea(Mat(approx))) > 100)  //¸éÀûÀÌ ÀÏÁ¤Å©±â ÀÌ»óÀÌ¾î¾ß ÇÑ´Ù. 
-		{
-
-			int size = approx.size();
-
-			//Contour¸¦ ±Ù»çÈ­ÇÑ Á÷¼±À» ±×¸°´Ù.
-			if (size % 2 == 0) {
-				line(img_result, approx[0], approx[approx.size() - 1], Scalar(0, 255, 0), 3);
-
-				for (int k = 0; k < size - 1; k++)
-					line(img_result, approx[k], approx[k + 1], Scalar(0, 255, 0), 3);
-
-				for (int k = 0; k < size; k++)
-					circle(img_result, approx[k], 3, Scalar(0, 0, 255));
-			}
-			else {
-				line(img_result, approx[0], approx[approx.size() - 1], Scalar(0, 255, 0), 3);
-
-				for (int k = 0; k < size - 1; k++)
-					line(img_result, approx[k], approx[k + 1], Scalar(0, 255, 0), 3);
-
-				for (int k = 0; k < size; k++)
-					circle(img_result, approx[k], 3, Scalar(0, 0, 255));
-			}
-
-
-
-			//µµÇüÀ» ÆÇÁ¤ÇÑ´Ù.
-			if (size == 3)
-				setLabel(img_result, "triangle", contours[i]); //»ï°¢Çü
-
-			//ÀÌÇÏ´Â ÇØ´ç ²ÀÁöÁ¡À» °¡Áø convex¶ó¸é Ã£´Â µµÇü
-			else if (size == 4 && isContourConvex(Mat(approx))) 
-				setLabel(img_result, "rectangle", contours[i]); //»ç°¢Çü
-
-			else if (size == 5 && isContourConvex(Mat(approx))) 
-				setLabel(img_result, "pentagon", contours[i]); //¿À°¢Çü
-
-			else if (size == 6 && isContourConvex(Mat(approx))) 
-				setLabel(img_result, "hexagon", contours[i]);  //À°°¢Çü
-
-			else if (size == 10 && isContourConvex(Mat(approx))) 
-				setLabel(img_result, "decagon", contours[i]);    //½Ê°¢Çü
-
-			//À§ Á¶°Ç¿¡ ÇØ´ç ¾ÈµÇ´Â °æ¿ì´Â Ã£¾Æ³½ ²ÀÁöÁ¡ °¹¼ö¸¦ Ç¥½Ã
-			else setLabel(img_result, to_string(approx.size()), contours[i]);
-		}
-
-	}
-
-
-	imshow("input", img_input);
-	imshow("result", img_result);
-
-
-	waitKey(0);
-
-
-	return 0;
+  return 0;
 }
-
-
