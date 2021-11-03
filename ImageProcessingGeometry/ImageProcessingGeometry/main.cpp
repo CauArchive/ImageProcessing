@@ -86,9 +86,7 @@ int main(int, char**) {
   for (size_t i = 0; i < contours.size(); i++) {
     approxPolyDP(Mat(contours[i]), approx,
                  arcLength(Mat(contours[i]), true) * 0.02, true);
-    if (fabs(contourArea(Mat(approx))) > 40 ||
-        fabs(contourArea(Mat(approx))) <
-            80)  // Detect Image with Area > 40 && < 80
+    if (if (fabs(contourArea(Mat(approx))) > 100)  // Detect Image with Area > 100)
     {
       int size = approx.size();
       // Decide whether the contour is a triangle or a rectangle
