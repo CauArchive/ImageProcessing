@@ -22,7 +22,7 @@ void setLabel(Mat& image, string str, vector<Point> contour) {
 }
 
 void convertColorToGray(Mat& image, Mat& gray) {
-  cvtColor(image, gray, CV_BGR2GRAY);
+  cvtColor(image, gray, COLOR_BGR2GRAY);
 }
 
 void convertGrayToBinary(Mat& gray, Mat& binary) {
@@ -30,7 +30,7 @@ void convertGrayToBinary(Mat& gray, Mat& binary) {
 }
 
 void findContoursFromBinary(Mat& binary, vector<vector<Point> >& contours) {
-  findContours(binary, contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE);
+  findContours(binary, contours, RETR_LIST, CHAIN_APPROX_SIMPLE);
 }
 
 int main(int, char**) {
