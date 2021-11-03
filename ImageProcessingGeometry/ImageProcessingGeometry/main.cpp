@@ -22,7 +22,22 @@ void setLabel(Mat& image, string str, vector<Point> contour) {
 }
 
 void convertColorToGray(Mat& image, Mat& gray) {
-  cvtColor(image, gray, COLOR_BGR2GRAY);
+  int rows = image.rows, cols = image.cols;
+  gray.create(image.size(), CV_8UC1);
+  if (image.isContinuous() && gray.isContinuous()) {
+    cols = rows * cols;
+    rows = 1;
+  }
+  for (int row = 0; row < rows; row++) {
+    uchar* pointer_row = image.ptr<uchar>(row);
+    uchar* pointer_row_gray = gray.ptr<uchar>(row);
+    for (int col = 0; col < cols; col++) {
+      pointer_row_gray[col] =
+          (uchar)(0.299 * pointer_row[0] + 0.587 * pointer_row[1] +
+                  0.114 * pointer_row[2]);
+      pointer_row += 3;
+    }
+  }
 }
 
 void convertGrayToBinary(Mat& gray, Mat& binary) {
