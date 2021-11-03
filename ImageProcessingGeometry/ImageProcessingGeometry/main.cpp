@@ -41,24 +41,24 @@ void convertColorToGray(Mat& image, Mat& gray) {
 }
 
 void convertGrayToBinary(Mat& gray, Mat& binary) {
-  // int rows = gray.rows, cols = gray.cols;
-  // binary.create(gray.size(), CV_8UC1);
-  // if (gray.isContinuous() && binary.isContinuous()) {
-  //   cols = rows * cols;
-  //   rows = 1;
-  // }
-  // for (int row = 0; row < rows; row++) {
-  //   uchar* pointer_row = gray.ptr<uchar>(row);
-  //   uchar* pointer_row_binary = binary.ptr<uchar>(row);
-  //   for (int col = 0; col < cols; col++) {
-  //     if (pointer_row[col] > 0) {
-  //       pointer_row_binary[col] = 255;
-  //     } else {
-  //       pointer_row_binary[col] = 0;
-  //     }
-  //   }
-  // }
-  threshold(gray, binary, 0, 255, THRESH_BINARY | THRESH_OTSU);
+  int rows = gray.rows, cols = gray.cols;
+  binary.create(gray.size(), CV_8UC1);
+  if (gray.isContinuous() && binary.isContinuous()) {
+    cols = rows * cols;
+    rows = 1;
+  }
+  for (int row = 0; row < rows; row++) {
+    uchar* pointer_row = gray.ptr<uchar>(row);
+    uchar* pointer_row_binary = binary.ptr<uchar>(row);
+    for (int col = 0; col < cols; col++) {
+      if (pointer_row[col] > 0) {
+        pointer_row_binary[col] = 255;
+      } else {
+        pointer_row_binary[col] = 0;
+      }
+    }
+  }
+  // threshold(gray, binary, 0, 255, THRESH_BINARY | THRESH_OTSU);
 }
 
 void findContoursFromBinary(Mat& binary, vector<vector<Point> >& contours) {
