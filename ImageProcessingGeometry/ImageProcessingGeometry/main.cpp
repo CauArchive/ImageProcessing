@@ -41,23 +41,24 @@ void convertColorToGray(Mat& image, Mat& gray) {
 }
 
 void convertGrayToBinary(Mat& gray, Mat& binary) {
-  int rows = gray.rows, cols = gray.cols;
-  binary.create(gray.size(), CV_8UC1);
-  if (gray.isContinuous() && binary.isContinuous()) {
-    cols = rows * cols;
-    rows = 1;
-  }
-  for (int row = 0; row < rows; row++) {
-    uchar* pointer_row = gray.ptr<uchar>(row);
-    uchar* pointer_row_binary = binary.ptr<uchar>(row);
-    for (int col = 0; col < cols; col++) {
-      if (pointer_row[col] > 0) {
-        pointer_row_binary[col] = 255;
-      } else {
-        pointer_row_binary[col] = 0;
-      }
-    }
-  }
+  // int rows = gray.rows, cols = gray.cols;
+  // binary.create(gray.size(), CV_8UC1);
+  // if (gray.isContinuous() && binary.isContinuous()) {
+  //   cols = rows * cols;
+  //   rows = 1;
+  // }
+  // for (int row = 0; row < rows; row++) {
+  //   uchar* pointer_row = gray.ptr<uchar>(row);
+  //   uchar* pointer_row_binary = binary.ptr<uchar>(row);
+  //   for (int col = 0; col < cols; col++) {
+  //     if (pointer_row[col] > 0) {
+  //       pointer_row_binary[col] = 255;
+  //     } else {
+  //       pointer_row_binary[col] = 0;
+  //     }
+  //   }
+  // }
+  threshold(gray, binary, 0, 255, THRESH_BINARY | THRESH_OTSU);
 }
 
 void findContoursFromBinary(Mat& binary, vector<vector<Point> >& contours) {
@@ -86,7 +87,7 @@ int main(int, char**) {
   for (size_t i = 0; i < contours.size(); i++) {
     approxPolyDP(Mat(contours[i]), approx,
                  arcLength(Mat(contours[i]), true) * 0.02, true);
-    if (if (fabs(contourArea(Mat(approx))) > 100)  // Detect Image with Area > 100)
+    if (fabs(contourArea(Mat(approx))) > 100)  // Detect Image with Area > 100)
     {
       int size = approx.size();
       // Decide whether the contour is a triangle or a rectangle
