@@ -23,31 +23,30 @@ void setLabel(Mat& image, string str, vector<Point> contour) {
 
 int main(int, char**) {
   Mat img_input, img_result, img_gray;
-  // Image read
+  // Image Load
   img_input = imread("1.png", IMREAD_COLOR);
   if (img_input.empty()) {
-    cout << "이미지가 없습니다\n";
+    cout << "No Image Found\n";
     return -1;
   }
-  //이미지를 grayscale로 변환
+  // Convert Image to GrayScale
   cvtColor(img_input, img_gray, COLOR_BGR2GRAY);
-  //바이너리 이미지로 변환
+  // Convert Image to Binary Image
   Mat binary_image;
   threshold(img_gray, img_gray, 0, 255, THRESH_BINARY_INV | THRESH_OTSU);
-  //이미지의 Contour를 찾습니다.
+  // Find Contours of Images
   vector<vector<Point> > contours;
   findContours(img_gray, contours, RETR_LIST, CHAIN_APPROX_SIMPLE);
-  //찾은 Contour를 근사화합니다.
+  // Approximate Contours
   vector<Point2f> approx;
   img_result = img_input.clone();
   for (size_t i = 0; i < contours.size(); i++) {
     approxPolyDP(Mat(contours[i]), approx,
                  arcLength(Mat(contours[i]), true) * 0.02, true);
-    if (fabs(contourArea(Mat(approx))) >
-        100)  //이미지의 면적인 특정 크기보다 커야 감지합니다
+    if (fabs(contourArea(Mat(approx))) > 100)  // Detect Image with Area > 100
     {
       int size = approx.size();
-      // Contour를 근사화한 결과를 이용해서 사각형인지 직사각형인지 판단합니다.
+      // Decide whether the contour is a triangle or a rectangle
       if (size % 2 == 0) {
         line(img_result, approx[0], approx[approx.size() - 1],
              Scalar(0, 255, 0), 3);
@@ -64,29 +63,24 @@ int main(int, char**) {
         for (int k = 0; k < size; k++)
           circle(img_result, approx[k], 3, Scalar(0, 0, 255));
       }
-
-      //근사화한 Contour의 크기가 3이면 삼각형입니다
+      // If approximated Contour size is over 3, it is a triangle
       if (size == 3) setLabel(img_result, "triangle", contours[i]);
-      //근사화한 Contour의 크기가 4이면 사각형입니다
+      // If approximated Contour size is over 4, it is a rectangle
       else if (size == 4 && isContourConvex(Mat(approx)))
         setLabel(img_result, "rectangle", contours[i]);
-      //근사화한 Contour의 크기가 5이면 오각형입니다
+      // If approximated Contour size is over 5, it is a pentagon
       else if (size == 5 && isContourConvex(Mat(approx)))
         setLabel(img_result, "pentagon", contours[i]);
-      //근사화한 Contour의 크기가 6이면 육각형입니다
+      // If approximated Contour size is over 6, it is a hexagon
       else if (size == 6 && isContourConvex(Mat(approx)))
         setLabel(img_result, "hexagon", contours[i]);
-      else if (size == 10 && isContourConvex(Mat(approx)))
-        setLabel(img_result, "decagon", contours[i]);
+      // Else Just Show the Num of Edges
       else
         setLabel(img_result, to_string(approx.size()), contours[i]);
     }
   }
-
   imshow("input", img_input);
   imshow("result", img_result);
-
   waitKey(0);
-
   return 0;
 }
