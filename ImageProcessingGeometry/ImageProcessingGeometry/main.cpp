@@ -40,9 +40,9 @@ void convertColorToGray(Mat& image, Mat& gray) {
   }
 }
 
-void convertGrayToBinary(Mat& gray, Mat& binary, int thresholdValue, int maxValue) {
-    /*
-      int rows = gray.rows, cols = gray.cols;
+void convertGrayToBinary(Mat& gray, Mat& binary, int thresholdValue,
+                         int maxValue) {
+  int rows = gray.rows, cols = gray.cols;
   binary.create(gray.size(), CV_8UC1);
   if (gray.isContinuous() && binary.isContinuous()) {
     cols = rows * cols;
@@ -59,10 +59,9 @@ void convertGrayToBinary(Mat& gray, Mat& binary, int thresholdValue, int maxValu
       }
     }
   }
-    */
 
-    
-   threshold(gray, binary, 0, 255, THRESH_BINARY_INV | THRESH_OTSU);
+  // need to implement THRESH_OTSU Algorithm to detect circle
+  // threshold(gray, binary, 0, 255, THRESH_BINARY_INV | THRESH_OTSU);
 }
 
 void findContoursFromBinary(Mat& binary, vector<vector<Point> >& contours) {
@@ -91,16 +90,17 @@ int main(int, char**) {
   for (size_t i = 0; i < contours.size(); i++) {
     approxPolyDP(Mat(contours[i]), approx,
                  arcLength(Mat(contours[i]), true) * 0.02, true);
-    if (fabs(contourArea(Mat(approx))) < 120000)  // Detect Image with Area < 120000)
+    if (fabs(contourArea(Mat(approx))) <
+        120000)  // Detect Image with Area < 120000)
     {
       int size = approx.size();
       // If approximated Contour size is over 3, it is a triangle
       if (size == 3) setLabel(img_result, "triangle", contours[i]);
       // If approximated Contour size is over 4, it is a rectangle
       else if (size == 4 && isContourConvex(Mat(approx)))
-          setLabel(img_result, "rectangle", contours[i]);
+        setLabel(img_result, "rectangle", contours[i]);
       else if (size <= 7 && isContourConvex(Mat(approx)))
-          setLabel(img_result, to_string(approx.size()), contours[i]);
+        setLabel(img_result, to_string(approx.size()), contours[i]);
       // Else decide it is circle
       else
         setLabel(img_result, "circle", contours[i]);
